@@ -1,10 +1,11 @@
+import numpy as np
 from torch.utils.data import Dataset
 import os
 import torch
 import json
-import xml.etree.ElementTree as ET
-from xml import etree
-from xml.etree.ElementTree import XML, fromstring
+from PIL import Image
+from lxml import etree
+
 
 class VOCDataset(Dataset):
     """ Read and Parse VOC Dataset"""
@@ -43,5 +44,26 @@ class VOCDataset(Dataset):
         xml_path = self.xml_list[index]
         with open(xml_path) as fid:
             xml_str = fid.read()
-        xml_tree = etree.fromstring(xml_str)
-        pass
+        xml = etree.fromstring(xml_str)
+        data = self.parse_xml_to_dict(xml)["annotation"]
+
+
+    def parse_xml_to_dict(self, xml):
+        """
+        Recursive Parse XML to Dict
+        """
+
+        # Base case
+        if len(xml) == 0:
+            return {xml.tag: xml.text}
+
+        result = {}
+        for child in xml:
+            child_result = self.parse_xml_to_dict(child)
+            if child_result != 'object':
+                result[child.tag] = child_result[child.tag]
+            else:
+                if child.tag not in result:
+                    result[child.tag] = []
+                result[child.tag].append(child_result[child.tag])
+        return {xml.tag: xml.text}
